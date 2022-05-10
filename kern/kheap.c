@@ -135,15 +135,25 @@ void kfree(void* virtual_address)
 unsigned int kheap_virtual_address(unsigned int physical_address)
 {
 	//TODO: [PROJECT 2022 - [3] Kernel Heap] kheap_virtual_address()
-	// Write your code here, remove the panic and write your code
-	panic("kheap_virtual_address() is not implemented yet...!!");
 
 	//return the virtual address corresponding to given physical_address
 	//refer to the project presentation and documentation for details
 
 	//change this "return" according to your answer
+	void* VA;
+       for(VA=(void*)KERNEL_HEAP_START;VA<ptr_last;VA+=PAGE_SIZE)
+         {
+          uint32* page_table_PTR=NULL;
+          struct Frame_Info *fVA_info =NULL;
+          fVA_info=get_frame_info(ptr_page_directory, VA, &page_table_PTR);
+          uint32 physical_add=to_physical_address(fVA_info);
+          if(fVA_info!=NULL&&(physical_add==physical_address))
+           {
+           return (uint32)VA;
+           };
+          }
 
-	return 0;
+return 0;
 }
 
 unsigned int kheap_physical_address(unsigned int virtual_address)
