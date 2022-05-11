@@ -534,18 +534,25 @@ int get_page_table(uint32 *ptr_page_directory, const void *virtual_address, uint
 
 void * create_page_table(uint32 *ptr_page_directory, const uint32 virtual_address)
 {
-	//TODO: [PROJECT 2022 -[5] Kernel Dynamic Allocation] create_page_table()
-	// Write your code here, remove the panic and write your code
-	panic("create_page_table() is not implemented yet...!!");
+	uint32* ptr_page_table = kmalloc(PAGE_SIZE);
+	uint32* PhysAdd_page_table;
+	uint32* PhysAdd;
 
-	//Use kmalloc() to create a new page TABLE for the given virtual address,
-	//Use CONSTRUCT_ENTRY() to build the table entry then link it to the given directory
-	//return the address of the created table
-	//REMEMBER TO:
-	//	a.	clear all entries (as it may contain garbage data)
-	//	b.	clear the TLB cache (using "tlbflush()")
-	//change this "return" according to your answer
-	return NULL;
+	if(ptr_page_table == NULL)
+	{
+		panic("NOT ENOUGH KERNEL HEAP SPACE");
+	}
+
+	PhysAdd_page_table=(uint32*)kheap_physical_address((uint32)ptr_page_table);
+
+	PhysAdd=&ptr_page_directory[PDX(virtual_address)];
+	*PhysAdd = ((uint32)PhysAdd_page_table |PERM_USER|PERM_PRESENT|PERM_WRITEABLE);
+
+	memset((uint32*)ptr_page_table , 0, PAGE_SIZE);
+	tlbflush();
+
+
+	return ptr_page_table;
 }
 
 
