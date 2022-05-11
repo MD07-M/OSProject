@@ -158,14 +158,11 @@ return 0;
 
 unsigned int kheap_physical_address(unsigned int virtual_address)
 {
-	//TODO: [PROJECT 2022 - [4] Kernel Heap] kheap_physical_address()
-	// Write your code here, remove the panic and write your code
-	panic("kheap_physical_address() is not implemented yet...!!");
 
-	//return the physical address corresponding to given virtual_address
-	//refer to the project presentation and documentation for details
+	uint32* ptr_page_table = NULL;
+	get_page_table(ptr_page_directory, (void*)virtual_address, &ptr_page_table);
 
-	//change this "return" according to your answer
-	return 0;
+	uint32 KPA=ptr_page_table[PTX(virtual_address)]>>12;
+
+	return KPA * PAGE_SIZE;
 }
-
