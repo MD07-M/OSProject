@@ -6,29 +6,32 @@
 void* ptr_end = (void*)KERNEL_HEAP_MAX;
 void* ptr_last = (void*)KERNEL_HEAP_START;
 int CountCall = 0;
+uint32 numbPages= 0;
 #define Ksize (KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE
+
 struct AddData{
 		void* address;
 		int numPages;
 	};
 
 struct AddData addData[Ksize];
-void* kmalloc(unsigned int size)
+
+
+/////////////////////////////////////////////////
+void* Nextfit(unsigned int size,int count)
 {
 	size=ROUNDUP(size,PAGE_SIZE);
-	uint32 numPages=size/PAGE_SIZE;
-	uint32 count = 0;
-	uint32 * ptrPageTable=NULL;
+	numbPages = size/PAGE_SIZE;
+	uint32 * ptrPageTable = NULL;
 
 
 	//use current to search for free frames not ptr_last so as not to change ptr_last in case
 	//the pages available were not enough
 	void* current= ptr_last;
-	void* ptr_start;
-	void* ptr_final;
+	void* ptr_start= NULL;
 
 	//use current to search for your start
-	while(current!=(ptr_last-PAGE_SIZE)&&count<numPages){
+	while(current!=(ptr_last-PAGE_SIZE)&&count<numbPages){
 
 
 		get_page_table(ptr_page_directory,current,&ptrPageTable);
@@ -55,12 +58,99 @@ void* kmalloc(unsigned int size)
 
 		current+=PAGE_SIZE;
 	}
+	if(count==numbPages)
+		return ptr_start;
+	else
+		return NULL;
 
-	if(count==numPages){
+
+
+}
+//////////////////////////
+void* Bestfit(unsigned int size, int count)
+{
+
+
+	size=ROUNDUP(size,PAGE_SIZE);
+	numbPages = size/PAGE_SIZE;
+	uint32 * ptrPageTable = NULL;
+	uint32 difference = Ksize+1 ;
+	int diff;
+
+	//use current to search for free frames not ptr_last so as not to change ptr_last in case
+	//the pages available were not enough
+	void* current= (void*)KERNEL_HEAP_START;
+	void* ptr_start= NULL;
+	void* ptr_temp= NULL;
+
+	//use current to search for your start
+	while(current!=ptr_end)
+	{
+
+
+		get_page_table(ptr_page_directory,current,&ptrPageTable);
+
+		if(ptrPageTable!=NULL){
+
+			struct Frame_Info* frame = get_frame_info(ptr_page_directory,current,&ptrPageTable);
+			if(frame==NULL)
+			{
+				if(count==0){
+					ptr_temp=current;
+				}
+				count++;
+				if(current==ptr_end-PAGE_SIZE)
+				{
+					diff=count - numbPages;
+					if(diff<difference&&diff>=0){
+
+					difference=diff;
+					ptr_start=ptr_temp;
+
+					}
+
+				}
+
+			}else if(count !=0)
+			{
+				//cprintf("x\n");
+				diff=count - numbPages;
+				if(diff<difference&&diff>=0){
+
+					difference=diff;
+					ptr_start=ptr_temp;
+				}
+				count = 0;
+			}
+		}
+
+
+		current+=PAGE_SIZE;
+	}
+	return ptr_start;
+
+
+
+}
+////////////////////////////
+void* kmalloc(unsigned int size)
+{
+	uint32 count = 0;
+	void* ptr_final;
+	void* ptr_start;
+	if(isKHeapPlacementStrategyBESTFIT()){
+		ptr_start= Bestfit( size, count);
+	}else{
+		ptr_start= Nextfit( size, count);
+	}
+
+
+
+	if(ptr_start!=NULL){
 		//the ptr_final will be the one returned so we need to save the star address for allocation
 		ptr_final=ptr_start;
 
-		for(int i = 0;i<numPages;i++){
+		for(int i = 0;i<numbPages;i++){
 			struct Frame_Info* newFrame;
 			if(allocate_frame(&newFrame)==E_NO_MEM){
 				return NULL;
@@ -73,8 +163,9 @@ void* kmalloc(unsigned int size)
 		//after allocation we change the value of the ptr_last for the next allocation to happen correctly
 		ptr_last=ptr_start;
 		addData[CountCall].address=ptr_final;
-		addData[CountCall].numPages=numPages;
+		addData[CountCall].numPages=numbPages;
 		CountCall++;
+		numbPages=0;
 		return ptr_final;
 
 	}
