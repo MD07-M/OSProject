@@ -447,24 +447,116 @@ void table_fault_handler(struct Env * curenv, uint32 fault_va)
 
 //Handle the page fault
 
-void page_fault_handler(struct Env * curenv, uint32 fault_va)
-{
+void page_fault_handler(struct Env * curenv, uint32 fault_va) {
 	//TODO: [PROJECT 2022 - [6] PAGE FAULT HANDLER]
 	// Write your code here, remove the panic and write your code
-	panic("page_fault_handler() is not implemented yet...!!");
+	uint32 maxSize = curenv->page_WS_max_size;
+	uint32 occSize = env_page_ws_get_size(curenv);
+	uint32 free = maxSize - occSize;
+	int flag = 0;
 
-	//refer to the project presentation and documentation for details
+	if (occSize < maxSize) {
 
+		Placement(curenv, fault_va);
 
-	//TODO: [PROJECT 2022 - BONUS4] Change WS Size according to Program Priority‌
+	} else {
+		if (isPageReplacmentAlgorithmModifiedCLOCK()) {
+			while (flag == 0) {
 
-
+				flag = TryOne(fault_va, occSize);
+				if (flag == 1) {
+					break;
+				}
+				flag = TryTwo(fault_va, occSize);
+				if (flag == 1) {
+					break;
+				}
+			}
+		}
+	}
 }
 
-void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va)
-{
+//refer to the project presentation and documentation for details
+
+//TODO: [PROJECT 2022 - BONUS4] Change WS Size according to Program Priority‌
+
+void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va) {
 	// your code is here, remove the panic and write your code
 	panic("this function is not required...!!");
 
 }
 
+// Replace
+void Replacement(uint32 fault_va, uint32 VA) {
+	unmap_frame(curenv->env_page_directory, (void *) VA);
+	env_page_ws_invalidate(curenv, VA);
+	Placement(curenv, fault_va);
+}
+
+int last_victim = 0;
+
+// Try 1 in MODIFIED CLOCK
+int TryOne(uint32 fault_va, int size) {
+	int B4_last_victim = last_victim - 1;
+	int flag = 0;
+	for (;; last_victim++) {
+
+		if (last_victim == size) {
+			last_victim = 0;
+		}
+
+		uint32 VA = env_page_ws_get_virtual_address(curenv, last_victim);
+		uint32 page_permissions = pt_get_page_permissions(curenv, VA);
+		if (page_permissions & !PERM_MODIFIED & !PERM_USED) {
+			Replacement(fault_va, VA);
+			flag = 1;
+			break;
+		}
+
+		if (last_victim != B4_last_victim) {
+			break;
+		}
+
+	}
+	return flag;
+}
+
+// Try 2 in MODIFIED CLOCK
+int TryTwo(uint32 fault_va, int size) {
+	int B4_last_victim = last_victim - 1;
+	int flag = 0;
+
+	for (;; last_victim++) {
+
+		if (last_victim == size) {
+			last_victim = 0;
+		}
+
+		uint32 VA = env_page_ws_get_virtual_address(curenv, last_victim);
+		uint32 page_permissions = pt_get_page_permissions(curenv, VA);
+
+		if (page_permissions & PERM_USED) {
+			pt_set_page_permissions(curenv, VA, 0, PERM_USED);
+			continue;
+		} else {
+
+			if (page_permissions & PERM_MODIFIED) {
+				//UPDATE PAGE
+				uint32* ptr_table = NULL;
+				struct Frame_Info *ptr_frame_info = get_frame_info(
+						curenv->env_page_directory, (void*) VA, &ptr_table);
+				int ret = pf_update_env_page(curenv, (void*) VA,
+						ptr_frame_info);
+			}
+
+			Replacement(fault_va, VA);
+			flag = 1;
+			break;
+		}
+		if (last_victim != B4_last_victim) {
+			break;
+		}
+
+	}
+	return flag;
+}
