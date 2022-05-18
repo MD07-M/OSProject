@@ -100,12 +100,26 @@ void sched_init_MLFQ(uint8 numOfLevels, uint8 *quantumOfEachLevel)
 
 	//TODO: [PROJECT 2022 [7] CPU Scheduling MLFQ] Initialize MLFQ
 	// Write your code here, remove the panic and write your code
-	panic("sched_init_MLFQ() is not implemented yet...!!");
+	//panic("sched_init_MLFQ() is not implemented yet...!!");
 
 	//[1] Create the ready queues and initialize them using init_queue()
+	    num_of_ready_queues=numOfLevels;
+	    env_ready_queues =kmalloc(num_of_ready_queues*sizeof(struct Env_Queue));
+	    for(int ind=0;ind<num_of_ready_queues;ind++)
+	    {
+	    	init_queue(&(env_ready_queues[ind]));
+	    }
 	//[2] Create the "quantums" array and initialize it by the given quantums in "quantumOfEachLevel[]"
+	    quantums=kmalloc(numOfLevels*sizeof(uint8));
+	    for(int index=0;index<num_of_ready_queues;index++)
+	    {
+	    	quantums[index]=quantumOfEachLevel[index];
+	    }
+
 	//[3] Set the CPU quantum by the first level one
+	    kclock_set_quantum(quantums[0]);
 }
+
 
 
 int queueindex=0;
