@@ -30,6 +30,12 @@ void print_trapframe(struct Trapframe *tf);
 void fault_handler(struct Trapframe *);
 void backtrace(struct Trapframe *);
 
+
+int TryOne(uint32 fault_va, int size);
+int TryTwo(uint32 fault_va, int size);
+void Placement(struct Env * curenv, uint32 fault_va);
+void Replacement(uint32 fault_va,uint32 VA);
+
 void setPageReplacmentAlgorithmLRU();
 void setPageReplacmentAlgorithmCLOCK();
 void setPageReplacmentAlgorithmFIFO();
