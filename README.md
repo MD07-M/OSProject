@@ -16,7 +16,7 @@ This project handles kernel modules and memory management unit. Carried out for 
 
 - [@Alaa Alaa](https://www.github.com/2la23la)
 
-- [@Ahmed Yasser](https://www.github.com/yasser) 
+- [@Ahmed Yasser](https://www.github.com/Ahmdyasser99) 
 
 - [@Nada ElGendy](https://www.github.com/nadaelgendy2) 
 ## Tech Used
