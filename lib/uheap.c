@@ -46,34 +46,45 @@ void* malloc(uint32 size) {
 	void* ptr_start = NULL;
 
 	//use current to search for your start
+//9 (1)
+	// 10-11 13-15 8-10
 
-	while (current != (ptr_last - PAGE_SIZE) && ptr_start == NULL) {
-		if (CountCall == 0 && size < Usize) {
+	do {
+		int flag=0;
+
+		if (CountCall == 0) {
 			ptr_start = current;
+
 		}
 
-		for (int i = 0; i < CountCall + 1; i++) {
+		for (int i = 0; i < CountCall; i++) {
 
-			int diff = ((uint32) current - (uint32) addData[i].address)	/ PAGE_SIZE;
 
-			if (diff > addData[i].numPages) {
+			uint32 diff = (current - addData[i].address)
+					/ PAGE_SIZE;
+			//cprintf("addresses is: %x %x\n",(uint32)current,(uint32)addData[i].address);
+			//cprintf("difference and numPages is: %x %x\n",diff,addData[i].numPages);
+
+			if (diff >= addData[i].numPages) {
 
 				ptr_start = current;
 
-			} else if (diff < 0) {
+				if (current + size > addData[i].address && current<addData[i].address) {
 
-
-				if (current + size < addData[i].address) {
-					ptr_start = current;
-				} else {
-					cprintf("pointer %x is interfering with next address %x \n",
-							current, addData[i].address);
 					ptr_start = NULL;
+					break;
 				}
 
 			} else {
-				cprintf("pointer %x is within address %x \n",current,addData[i].address);
-				ptr_start = NULL;
+
+
+					//cprintf("pointer %x is interfering with other address %x \n",
+						//	current, addData[i].address);
+					ptr_start = NULL;
+					current= addData[i].address+(addData[i].numPages*PAGE_SIZE)-PAGE_SIZE;
+					break;
+
+
 
 			}
 			if (ptr_start != NULL) {
@@ -88,7 +99,7 @@ void* malloc(uint32 size) {
 		}
 
 		current += PAGE_SIZE;
-	}
+	}while (current != (ptr_last - PAGE_SIZE) && ptr_start == NULL);
 	//	3) Call sys_allocateMem to invoke the Kernel for allocation
 	// 	4) Return pointer containing the virtual address of allocated space,
 	//
@@ -98,10 +109,12 @@ void* malloc(uint32 size) {
 		sys_allocateMem((uint32) ptr_start, size);
 		addData[CountCall].address = ptr_start;
 		addData[CountCall].numPages = numPages;
+		//cprintf("allocated at : %x\n", addData[CountCall].address);
 		ptr_last = ptr_start + size;
 		if (ROUNDUP(ptr_last,PAGE_SIZE) == ptr_end) {
 			ptr_last = (void*) USER_HEAP_START;
 		}
+		//cprintf("ptr last is now : %x\n", ptr_last);
 
 		CountCall++;
 		return ptr_start;
@@ -134,6 +147,7 @@ void free(void* virtual_address) {
 	//TODO: [PROJECT 2022 - [11] User Heap free()] [User Side]
 	// Write your code here, remove the panic and write your code
 	//panic("free() is not implemented yet...!!");
+
 	void* VAadd = virtual_address;
 	int size = 0;
 	int found = 0;
