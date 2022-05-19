@@ -784,6 +784,7 @@ void freeMem(struct Env* e, uint32 virtual_address, uint32 size) {
 	VirtualAddress = virtual_address;
 
 	for (int i = 0; i < NumOfPages; i++) {
+		flag = 1;
 		ptr_page_table = NULL;
 		get_page_table(e->env_page_directory, (void*) VirtualAddress,
 				&ptr_page_table);
