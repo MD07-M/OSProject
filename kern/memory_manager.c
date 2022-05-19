@@ -747,18 +747,63 @@ void allocateMem(struct Env* e, uint32 virtual_address, uint32 size)
 
 // [12] freeMem
 
-void freeMem(struct Env* e, uint32 virtual_address, uint32 size)
-{
-
-	//TODO: [PROJECT 2022 - [12] User Heap] freeMem() [Kernel Side]
-	// Write your code here, remove the panic and write your code
-	panic("freeMem() is not implemented yet...!!");
+void freeMem(struct Env* e, uint32 virtual_address, uint32 size) {
 
 	//This function should:
+
+	uint32 NumOfPages = ROUNDUP(size,PAGE_SIZE) / PAGE_SIZE;
+	uint32 VirtualAddress = virtual_address;
+
+	struct Frame_Info* Info_Ptr = NULL;
+	uint32* ptr_page_table;
+
+	uint32 MaxSize = e->page_WS_max_size;
+	int flag = 1;
+
 	//1. Free ALL pages of the given range from the Page File
+	for (int i = 0; i < NumOfPages; i++) {
+		pf_remove_env_page(e, VirtualAddress);
+		VirtualAddress += PAGE_SIZE;
+	}
+
 	//2. Free ONLY pages that are resident in the working set from the memory
+
+	VirtualAddress = virtual_address;
+	for (int i = 0; i < MaxSize; i++) {
+		uint32 VirualAddressWS = env_page_ws_get_virtual_address(e, i);
+
+		if ((VirualAddressWS < (VirtualAddress + ROUNDUP(size, PAGE_SIZE))) && (VirualAddressWS >= VirtualAddress)) {
+			unmap_frame(e->env_page_directory, (void*) VirualAddressWS);
+			env_page_ws_clear_entry(e, i);
+
+		}
+	}
+
 	//3. Removes ONLY the empty page tables (i.e. not used) (no pages are mapped in the table)
-	//   remember that the page table was created using kmalloc so it should be removed using kfree()
+
+	VirtualAddress = virtual_address;
+
+	for (int i = 0; i < NumOfPages; i++) {
+		ptr_page_table = NULL;
+		get_page_table(e->env_page_directory, (void*) VirtualAddress,
+				&ptr_page_table);
+
+		if (ptr_page_table != NULL) {
+			for (int j = 0; j < 1024; j++) {
+				if (ptr_page_table[j] != 0) {
+					flag = 0;
+					break;
+				}
+			}
+			if (flag) {
+				kfree((void*) ptr_page_table);
+				pd_clear_page_dir_entry(e, (uint32) VirtualAddress);
+			}
+		}
+		VirtualAddress += PAGE_SIZE;
+	}
+	//Refresh the cache memory
+	tlbflush();
 
 }
 
